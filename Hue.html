@@ -2,8 +2,7 @@
 	<head>
 		<script language="javascript">
 
-			// TODO: Clean-up internal state after changes
-			// TODO: Wait between actions (to prevent bridge tripping itself)
+			// TODO: Wait between actions (to prevent bridge tripping over itself)
 
 			function $($id){
 
@@ -122,11 +121,22 @@
 					$request.open('PUT', 'scenes/' + $scene);
 					$request.send(JSON.stringify($payload));
 
-					$request.addEventListener('load', function(){
+					$request.addEventListener('load', (function(){
+
+						// Update list of scene-lights
+
+						var $sceneLights = [];
+
+						$lights.forEach(function($light){
+
+							$sceneLights[$light] = $light;
+						});
+
+						this.sceneLights[$scene] = $sceneLights;
 
 						console.log($request.response)
 
-					});
+					}).bind(this));
 				};
 
 				this.recallScene = function($scene){
@@ -152,7 +162,7 @@
 
 			document.addEventListener('DOMContentLoaded', function(){
 
-				// TODO: Some warnings here...
+				// TODO: Some warnings here would be nice...
 
 				var hueCredentials = JSON.parse(localStorage.getItem('hueCredentials'));
 
@@ -168,8 +178,6 @@
 						var $option = $options[$i];
 
 						if($lights[$option.name]){
-
-							console.log($option.name);
 
 							$option.selected = true;
 						}
