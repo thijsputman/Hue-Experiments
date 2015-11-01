@@ -187,7 +187,7 @@
 
 				$('scenes').addEventListener('change', function($event){
 
-					var $lights = $Hue.sceneLights[$event.target.selectedOptions[0].name];
+					var $lights = $Hue.sceneLights[$event.target.options[$event.target.selectedIndex].name];
 					var $options = $('lights').querySelectorAll('option');
 
 					for(var $i = 0; $i < $options.length; ++$i){
@@ -211,7 +211,7 @@
 					var $lights = [];
 					var $options = $('lights').querySelectorAll('option');
 
-					var $scene = $('scenes').selectedOptions[0].name;
+					var $scene = $('scenes').options[$('scenes').selectedIndex].name;
 
 					for(var $i = 0; $i < $options.length; ++$i){
 
@@ -229,7 +229,7 @@
 
 				$('recallScene').addEventListener('click', function(){
 
-					var $scene = $('scenes').selectedOptions[0].name;
+					var $scene = $('scenes').options[$('scenes').selectedIndex].name;
 
 					$Hue.recallScene($scene);
 				});
