@@ -1,0 +1,238 @@
+<html>
+	<head>
+		<script language="javascript">
+
+			// TODO: Clean-up internal state after changes
+			// TODO: Wait between actions (to prevent bridge tripping itself)
+
+			function $($id){
+
+				return document.getElementById($id);
+			}
+
+			function Hue(ip, user){
+
+				this.ip = ip;
+				this.user = user;
+
+				this.lights = [];
+				this.scenes = [];
+				this.sceneLights = [];
+
+				this.XMLHttpRequest = function(){
+
+					var $request = new XMLHttpRequest();
+
+					$request._open = $request.open;
+
+					$request.open = (function(method, url){
+
+						var $url = 'http://' + this.ip + '/api/'
+							+ this.user + '/' + url
+
+						return $request._open(method, $url)
+
+					}).bind(this);
+
+					return $request;
+				};
+
+				this.listLights = function(){
+
+					var $request = this.XMLHttpRequest();
+
+					$request.open('GET', 'lights');
+					$request.send();
+
+					$request.addEventListener('load', (function(){
+
+						var $lights = document.getElementById('lights');
+						var $response = JSON.parse($request.response);
+
+						for(var $key in $response){
+
+							// TODO: Move to interface building
+
+							var $option = document.createElement('option');
+
+							$option.name = $key;
+							$option.textContent = $response[$key].name;
+
+							this.lights[$key] = $response[$key].name;
+
+							$lights.appendChild($option);
+						}
+
+					}).bind(this));
+
+				};
+
+				this.listLights();
+
+				this.listScenes = function(){
+
+					var $request = this.XMLHttpRequest();
+
+					$request.open('GET', 'scenes');
+					$request.send();
+
+					$request.addEventListener('load', (function(){
+
+						var $scenes = document.getElementById('scenes');
+						var $response = JSON.parse($request.response);
+
+						for(var $key in $response){
+
+							// TODO: Move to interface building
+
+							var $option = document.createElement('option');
+
+							$option.name = $key;
+							$option.textContent = $response[$key].name;
+
+							$scenes.appendChild($option);
+
+							this.scenes[$key] = $response[$key].name;
+
+							var $sceneLights = [];
+
+							$response[$key].lights.forEach(function($light){
+
+								$sceneLights[$light] = $light;
+							});
+
+							this.sceneLights[$key] = $sceneLights;
+						}
+
+					}).bind(this));
+
+				};
+
+				this.listScenes();
+
+				this.updateScene = function($scene, $lights){
+
+					var $request = this.XMLHttpRequest();
+
+					var $payload = {
+						'name':		this.scenes[$scene],
+						'lights':	$lights
+					};
+
+					$request.open('PUT', 'scenes/' + $scene);
+					$request.send(JSON.stringify($payload));
+
+					$request.addEventListener('load', function(){
+
+						console.log($request.response)
+
+					});
+				};
+
+				this.recallScene = function($scene){
+
+					var $request = this.XMLHttpRequest();
+
+					var $payload = {
+						'scene': $scene
+					};
+
+					$request.open('PUT', 'groups/0/action');
+					$request.send(JSON.stringify($payload));
+
+					$request.addEventListener('load', function(){
+
+						console.log($request.response)
+
+					});
+
+				}
+			}
+
+
+			document.addEventListener('DOMContentLoaded', function(){
+
+				// TODO: Some warnings here...
+
+				var hueCredentials = JSON.parse(localStorage.getItem('hueCredentials'));
+
+				var $Hue = new Hue(hueCredentials[0], hueCredentials[1]);
+
+				document.getElementById('scenes').addEventListener('change', function($event){
+
+					var $lights = $Hue.sceneLights[$event.target.selectedOptions[0].name];
+					var $options = document.getElementById('lights').querySelectorAll('option');
+
+					for(var $i = 0; $i < $options.length; ++$i){
+
+						var $option = $options[$i];
+
+						if($lights[$option.name]){
+
+							console.log($option.name);
+
+							$option.selected = true;
+						}
+						else{
+
+							$option.selected = false;
+						}
+					}
+
+				});
+
+				document.getElementById('updateScene').addEventListener('click', function(){
+
+					var $lights = [];
+					var $options = document.getElementById('lights').querySelectorAll('option');
+
+					var $scene = document.getElementById('scenes').selectedOptions[0].name;
+
+					for(var $i = 0; $i < $options.length; ++$i){
+
+						var $option = $options[$i];
+
+						if($option.selected){
+
+							$lights.push($option.name);
+						}
+
+					}
+
+					$Hue.updateScene($scene, $lights);
+				});
+
+				document.getElementById('recallScene').addEventListener('click', function(){
+
+					var $scene = $('scenes').selectedOptions[0].name;
+
+					$Hue.recallScene($scene);
+				});
+
+
+			});
+
+
+
+
+		</script>
+	</head>
+
+	<body>
+
+		<h1>Hue</h1>
+
+		<h2><label for="scenes">Scenes</label></h2>
+
+		<select id="scenes" type="select"></select>
+
+		<h2><label for="lights">Lights</label></h2>
+
+		<select multiple id="lights" type="select"></select>
+
+		<button id="updateScene">Update scene</button>
+		<button id="recallScene">Recall scene</button>
+
+	</body>
+
+</html>
