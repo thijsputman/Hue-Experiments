@@ -175,17 +175,18 @@
 						JSON.stringify($hueCredentials));
 				});
 
-				var hueCredentials = JSON.parse(localStorage.getItem('hueCredentials'));
+				var $hueCredentials = JSON.parse(localStorage.getItem('hueCredentials'));
 
-				if(!hueCredentials['host'] || !hueCredentials['user']){
+				if($hueCredentials == undefined ||
+					!$hueCredentials['host'] || !$hueCredentials['user']){
 
 					return;
 				}
 
-				$('host').value = hueCredentials['host'];
-				$('user').value = hueCredentials['user'];
+				$('host').value = $hueCredentials['host'];
+				$('user').value = $hueCredentials['user'];
 
-				var $Hue = new Hue(hueCredentials['host'], hueCredentials['user']);
+				var $Hue = new Hue($hueCredentials['host'], $hueCredentials['user']);
 
 				document.addEventListener('hueReady', function(){
 
