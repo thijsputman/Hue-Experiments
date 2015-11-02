@@ -6,8 +6,6 @@
 		<meta name="msapplication-TileColor" content="#0B5ED8">
 		<script language="javascript">
 
-			// TODO: Wait between actions (to prevent bridge tripping over itself)
-
 			function $($id){
 
 				return document.getElementById($id);
@@ -18,9 +16,9 @@
 				this.ip = ip;
 				this.user = user;
 
-				this.lights = [];
-				this.scenes = [];
-				this.sceneLights = [];
+				this.lights;
+				this.scenes;
+				this.sceneLights;
 
 				this.XMLHttpRequest = function(){
 
@@ -40,7 +38,9 @@
 					return $request;
 				};
 
-				this.listLights = function(){
+				this._listLights = function(){
+
+					this.lights = {};
 
 					var $request = this.XMLHttpRequest();
 
@@ -49,30 +49,22 @@
 
 					$request.addEventListener('load', (function(){
 
-						var $lights = $('lights');
 						var $response = JSON.parse($request.response);
 
 						for(var $key in $response){
 
-							// TODO: Move to interface building
-
-							var $option = document.createElement('option');
-
-							$option.name = $key;
-							$option.textContent = $response[$key].name;
-
 							this.lights[$key] = $response[$key].name;
-
-							$lights.appendChild($option);
 						}
 
-					}).bind(this));
+						this._listScenes();
 
+					}).bind(this));
 				};
 
-				this.listLights();
+				this._listScenes = function(){
 
-				this.listScenes = function(){
+					this.scenes = {};
+					this.sceneLights = {};
 
 					var $request = this.XMLHttpRequest();
 
@@ -81,19 +73,9 @@
 
 					$request.addEventListener('load', (function(){
 
-						var $scenes = $('scenes');
 						var $response = JSON.parse($request.response);
 
 						for(var $key in $response){
-
-							// TODO: Move to interface building
-
-							var $option = document.createElement('option');
-
-							$option.name = $key;
-							$option.textContent = $response[$key].name;
-
-							$scenes.appendChild($option);
 
 							this.scenes[$key] = $response[$key].name;
 
@@ -107,11 +89,23 @@
 							this.sceneLights[$key] = $sceneLights;
 						}
 
-					}).bind(this));
+						var $event = document.createEvent('Event');
+						$event.initEvent('hueReady', true, false);
 
+						document.dispatchEvent($event);
+
+						var $event = document.createEvent('Event');
+						$event.initEvent('hueResult', true, false);
+						$event.detail = 'Awaiting your command!';
+
+						document.dispatchEvent($event);
+
+					}).bind(this));
 				};
 
-				this.listScenes();
+				// Initialise lights and scenes
+
+				this._listLights();
 
 				this.updateScene = function($scene, $lights){
 
@@ -138,7 +132,11 @@
 
 						this.sceneLights[$scene] = $sceneLights;
 
-						console.log($request.response)
+						var $event = document.createEvent('Event');
+						$event.initEvent('hueResult', true, false);
+						$event.detail = $request.response;
+
+						document.dispatchEvent($event);
 
 					}).bind(this));
 				};
@@ -156,13 +154,14 @@
 
 					$request.addEventListener('load', function(){
 
-						console.log($request.response)
+						var $event = document.createEvent('Event');
+						$event.initEvent('hueResult', true, false);
+						$event.detail = $request.response;
 
+						document.dispatchEvent($event);
 					});
-
 				}
 			}
-
 
 			document.addEventListener('DOMContentLoaded', function(){
 
@@ -188,6 +187,37 @@
 
 				var $Hue = new Hue(hueCredentials['host'], hueCredentials['user']);
 
+				document.addEventListener('hueReady', function(){
+
+					var $scenes = $('scenes');
+					var $lights = $('lights');
+
+					for(var $key in $Hue.scenes){
+
+						var $option = document.createElement('option');
+
+						$option.name = $key;
+						$option.textContent = $Hue.scenes[$key];
+
+						$scenes.appendChild($option);
+					}
+
+					for(var $key in $Hue.lights){
+
+						var $option = document.createElement('option');
+
+						$option.name = $key;
+						$option.textContent = $Hue.lights[$key];
+
+						$lights.appendChild($option);
+					}
+				});
+
+				document.addEventListener('hueResult', function($event){
+
+					$('result').textContent = $event.detail;
+				});
+
 				$('scenes').addEventListener('change', function($event){
 
 					var $lights = $Hue.sceneLights[$event.target.options[$event.target.selectedIndex].name];
@@ -206,7 +236,6 @@
 							$option.selected = false;
 						}
 					}
-
 				});
 
 				$('updateScene').addEventListener('click', function(){
@@ -224,7 +253,6 @@
 
 							$lights.push($option.name);
 						}
-
 					}
 
 					$Hue.updateScene($scene, $lights);
@@ -244,7 +272,7 @@
 
 	<body>
 
-		<h1>Hue</h1>
+		<h1>Hue Scene Manager</h1>
 
 		<h2><label for="scenes">Scenes</label></h2>
 
@@ -253,12 +281,21 @@
 		<h2><label for="lights">Lights</label></h2>
 
 		<select multiple id="lights" type="select"></select>
-
+		<br/>
 		<button id="updateScene">Update scene</button>
 		<button id="recallScene">Recall scene</button>
 
+		<h3>Hue Result</h3>
+
+		<p id="result">
+			&hellip;
+		</p>
+
+		<h3>Hue Credentials</h3>
+
 		<p>
-			<label for="host">Host:</label><input type="text" id="host" name="host"/><br/>
+			<label for="host">Host:</label><input type="text" id="host" name="host"/>
+			<br/>
 			<label for="user">User:</label><input type="text" id="user" name="user"/>
 			<button id="saveCredentials">Save credentials</button>
 		</p>
